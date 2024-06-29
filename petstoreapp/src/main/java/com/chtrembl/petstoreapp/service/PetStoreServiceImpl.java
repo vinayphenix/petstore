@@ -33,10 +33,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import com.microsoft.applicationinsights.TelemetryClient;
 
 @Service
 public class PetStoreServiceImpl implements PetStoreService {
 	private static final Logger logger = LoggerFactory.getLogger(PetStoreServiceImpl.class);
+	private static final TelemetryClient telemetryClient = new TelemetryClient();
+
 
 	private final User sessionUser;
 	private final ContainerEnvironment containerEnvironment;
@@ -66,11 +69,15 @@ public class PetStoreServiceImpl implements PetStoreService {
 	@Override
 	public Collection<Pet> getPets(String category) {
 		List<Pet> pets = new ArrayList<>();
-
+		logger.info("before test");
+		telemetryClient.trackEvent("test"
+				,
+				this.sessionUser.getCustomEventProperties(), null);
 		this.sessionUser.getTelemetryClient().trackEvent(
 				String.format("PetStoreApp user %s is requesting to retrieve pets from the PetStorePetService",
 						this.sessionUser.getName()),
 				this.sessionUser.getCustomEventProperties(), null);
+        logger.info("after test");
 		try {
 			Consumer<HttpHeaders> consumer = it -> it.addAll(this.webRequest.getHeaders());
 			pets = this.petServiceWebClient.get().uri("petstorepetservice/v2/pet/findByStatus?status=available")

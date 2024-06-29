@@ -34,7 +34,7 @@ public class User implements Serializable {
 	// time to show Telemetry with APIM requests
 	private List<Product> products;
 
-	@Autowired
+	@Autowired(required = false)
 	private transient TelemetryClient telemetryClient;
 
 	@Autowired
