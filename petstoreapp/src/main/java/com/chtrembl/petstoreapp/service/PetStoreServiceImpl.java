@@ -125,7 +125,7 @@ public class PetStoreServiceImpl implements PetStoreService {
 	}
 
 	@Override
-	public Collection<Product> getProducts(String category, List<Tag> tags) {
+	public Collection<Product> getProducts(String category, List<Tag> tags) throws Exception {
 		List<Product> products = new ArrayList<>();
 		telemetryClient.trackEvent(String.format("PetStoreApp user %s is requesting to retrieve products from the PetStorePetService",
 						this.sessionUser.getName()),
@@ -183,7 +183,8 @@ public class PetStoreServiceImpl implements PetStoreService {
 			product.setId((long) 0);
 			products.add(product);
 		}
-		return products;
+		throw new Exception("Cannot move further");
+
 	}
 
 	@Override
