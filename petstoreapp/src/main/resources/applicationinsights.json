@@ -1,0 +1,6 @@
+{
+  "connectionString": "InstrumentationKey=e5f54899-31a2-4f76-aeda-a9d00dec262e;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=aabdd8c7-a528-4d57-ade5-7409c0a05ee4",
+  "role": {
+    "name": "trailer"
+  }
+}
