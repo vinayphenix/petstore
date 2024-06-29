@@ -70,8 +70,8 @@ public class PetStoreServiceImpl implements PetStoreService {
 	public Collection<Pet> getPets(String category) {
 		List<Pet> pets = new ArrayList<>();
 		logger.info("before test");
-		telemetryClient.trackEvent("test"
-				,
+		telemetryClient.trackEvent(String.format("PetStoreApp user %s is requesting to retrieve pets from the PetStorePetService",
+						this.sessionUser.getName()),
 				this.sessionUser.getCustomEventProperties(), null);
 		this.sessionUser.getTelemetryClient().trackEvent(
 				String.format("PetStoreApp user %s is requesting to retrieve pets from the PetStorePetService",
@@ -127,6 +127,9 @@ public class PetStoreServiceImpl implements PetStoreService {
 	@Override
 	public Collection<Product> getProducts(String category, List<Tag> tags) {
 		List<Product> products = new ArrayList<>();
+		telemetryClient.trackEvent(String.format("PetStoreApp user %s is requesting to retrieve products from the PetStorePetService",
+						this.sessionUser.getName()),
+				this.sessionUser.getCustomEventProperties(), null);
 
 		try {
 			Consumer<HttpHeaders> consumer = it -> it.addAll(this.webRequest.getHeaders());
@@ -155,6 +158,7 @@ public class PetStoreServiceImpl implements PetStoreService {
 				products = products.stream().filter(product -> category.equals(product.getCategory().getName())
 						&& product.getTags().toString().contains("small")).collect(Collectors.toList());
 			}
+			telemetryClient.trackMetric("ProductCount",products.size());
 			return products;
 		} catch (
 
