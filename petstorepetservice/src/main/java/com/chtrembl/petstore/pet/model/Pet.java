@@ -1,9 +1,21 @@
 package com.chtrembl.petstore.pet.model;
 
+import static javax.persistence.GenerationType.SEQUENCE;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
@@ -15,33 +27,47 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 import io.swagger.annotations.ApiModelProperty;
 
-/**
- * Pet
- */
 @Validated
 @javax.annotation.Generated(value = "io.swagger.codegen.languages.SpringCodegen", date = "2021-12-20T15:31:39.272-05:00")
-
+@Entity
+@Table(name = "pet")
 public class Pet {
 	@JsonProperty("id")
+	@Id
+	@Column(name = "id")
+	@GeneratedValue(strategy = SEQUENCE, generator = "ID_SEQ")
 	private Long id;
 
 	@JsonProperty("category")
+	@ManyToOne
+	@JoinColumn(name = "category_id")
 	private Category category;
 
 	@JsonProperty("name")
+	@Column(name = "name", unique = true, nullable = false)
 	private String name;
 
 	@JsonProperty("photoURL")
 	@Valid
+	@Column(name = "photoURL", nullable = false)
 	private String photoURL;
 
 	@JsonProperty("tags")
 	@Valid
-	private List<Tag> tags = null;
+	@OneToMany
+	@JoinTable(
+			name = "pet_tag",
+			joinColumns = @JoinColumn(
+					name = "pet_id",
+					referencedColumnName = "id"
+			),
+			inverseJoinColumns = @JoinColumn(
+					name = "tag_id",
+					referencedColumnName = "id"
+			)
+	)
+	private List<Tag> tags;
 
-	/**
-	 * pet status in the store
-	 */
 	public enum StatusEnum {
 		AVAILABLE("available"),
 
@@ -68,7 +94,7 @@ public class Pet {
 		@JsonCreator
 		public static StatusEnum fromValue(String value) {
 			for (StatusEnum b : StatusEnum.values()) {
-				if (b.value.equals(value)) {
+				if (b.value.equalsIgnoreCase(value)) {
 					return b;
 				}
 			}
@@ -77,6 +103,8 @@ public class Pet {
 	}
 
 	@JsonProperty("status")
+	@Convert(converter = StatusConverter.class)
+	@Column(name = "status", nullable = false)
 	private StatusEnum status;
 
 	public Pet id(Long id) {
@@ -84,11 +112,6 @@ public class Pet {
 		return this;
 	}
 
-	/**
-	 * Get id
-	 * 
-	 * @return id
-	 */
 	@ApiModelProperty(value = "")
 
 	public Long getId() {
@@ -104,11 +127,6 @@ public class Pet {
 		return this;
 	}
 
-	/**
-	 * Get category
-	 * 
-	 * @return category
-	 */
 	@ApiModelProperty(value = "")
 
 	@Valid
@@ -126,11 +144,6 @@ public class Pet {
 		return this;
 	}
 
-	/**
-	 * Get name
-	 * 
-	 * @return name
-	 */
 	@ApiModelProperty(example = "doggie", required = true, value = "")
 	@NotNull
 
@@ -142,11 +155,6 @@ public class Pet {
 		this.name = name;
 	}
 
-	/**
-	 * Get photoUrls
-	 * 
-	 * @return photoUrls
-	 */
 	@ApiModelProperty(required = true, value = "")
 	@NotNull
 
@@ -171,11 +179,6 @@ public class Pet {
 		return this;
 	}
 
-	/**
-	 * Get tags
-	 * 
-	 * @return tags
-	 */
 	@ApiModelProperty(value = "")
 
 	@Valid
@@ -193,11 +196,6 @@ public class Pet {
 		return this;
 	}
 
-	/**
-	 * pet status in the store
-	 * 
-	 * @return status
-	 */
 	@ApiModelProperty(value = "pet status in the store")
 
 	public StatusEnum getStatus() {
@@ -242,10 +240,6 @@ public class Pet {
 		return sb.toString();
 	}
 
-	/**
-	 * Convert the given object to string with each line indented by 4 spaces
-	 * (except the first line).
-	 */
 	private String toIndentedString(java.lang.Object o) {
 		if (o == null) {
 			return "null";

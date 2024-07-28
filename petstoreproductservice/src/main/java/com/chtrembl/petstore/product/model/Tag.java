@@ -1,24 +1,33 @@
 package com.chtrembl.petstore.product.model;
 
+import static javax.persistence.GenerationType.SEQUENCE;
+
 import java.util.Objects;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Table;
 import org.springframework.validation.annotation.Validated;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.swagger.annotations.ApiModelProperty;
 
-/**
- * Tag
- */
 @Validated
 @javax.annotation.Generated(value = "io.swagger.codegen.languages.SpringCodegen", date = "2021-12-20T15:31:39.272-05:00")
-
+@Entity
+@Table(name = "tag")
 public class Tag {
 	@JsonProperty("id")
-	private Long id = null;
+	@Id
+	@Column(name = "id")
+	@GeneratedValue(strategy = SEQUENCE, generator = "ID_SEQ")
+	private Long id;
 
 	@JsonProperty("name")
+	@Column(name = "name", unique = true, nullable = false)
 	private String name = null;
 
 	public Tag id(Long id) {
@@ -26,11 +35,6 @@ public class Tag {
 		return this;
 	}
 
-	/**
-	 * Get id
-	 * 
-	 * @return id
-	 **/
 	@ApiModelProperty(value = "")
 
 	public Long getId() {
@@ -46,11 +50,6 @@ public class Tag {
 		return this;
 	}
 
-	/**
-	 * Get name
-	 * 
-	 * @return name
-	 **/
 	@ApiModelProperty(value = "")
 
 	public String getName() {
@@ -89,10 +88,6 @@ public class Tag {
 		return sb.toString();
 	}
 
-	/**
-	 * Convert the given object to string with each line indented by 4 spaces
-	 * (except the first line).
-	 */
 	private String toIndentedString(java.lang.Object o) {
 		if (o == null) {
 			return "null";

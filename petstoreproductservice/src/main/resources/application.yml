@@ -9,6 +9,14 @@ server:
 spring:
   application:
     name: petstoreproductservice
+  datasource:
+    password: Password@123
+    url: jdbc:postgresql://module8postgres.postgres.database.azure.com:5432/petstoreproductservice_db?sslmode=require
+    username: module8admin
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
