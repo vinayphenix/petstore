@@ -20,7 +20,7 @@ spring:
   cloud:
     azure:
       servicebus:
-        url: ${QUEUE-URL}
+        url: ${QUEUE_URL}
         queue: reservations
 
 management:
