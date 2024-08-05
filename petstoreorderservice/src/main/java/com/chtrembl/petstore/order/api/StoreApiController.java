@@ -50,6 +50,9 @@ public class StoreApiController implements StoreApi {
 	@Autowired
 	private StoreApiCache storeApiCache;
 
+	@Autowired
+	private ServiceBusSenderClient senderClient;
+
 	@Override
 	public StoreApiCache getBeanToBeAutowired() {
 		return storeApiCache;
@@ -164,6 +167,7 @@ public class StoreApiController implements StoreApi {
 			try {
 				Order order = this.storeApiCache.getOrder(body.getId());
 				String orderJSON = new ObjectMapper().writeValueAsString(order);
+				senderClient.sendMessage(new ServiceBusMessage(orderJSON));
 
 				ApiUtil.setResponse(request, "application/json", orderJSON);
 				return new ResponseEntity<>(HttpStatus.OK);

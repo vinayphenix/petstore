@@ -17,6 +17,11 @@ spring:
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
+  cloud:
+    azure:
+      servicebus:
+        url: ${QUEUE-URL:https://module9servicebus.servicebus.windows.net/reservations}
+        queue: ${QUEUE_NAME:reservations}
 
 management:
   endpoints:
