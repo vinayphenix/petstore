@@ -20,8 +20,8 @@ spring:
   cloud:
     azure:
       servicebus:
-        url: ${QUEUE-URL:https://module9servicebus.servicebus.windows.net/reservations}
-        queue: ${QUEUE_NAME:reservations}
+        url: ${QUEUE-URL}
+        queue: reservations
 
 management:
   endpoints:
