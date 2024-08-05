@@ -1,0 +1,10 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "",
+    "FUNCTIONS_EXTENSION_VERSION": "~4",
+    "AzureWebJobsDashboard": "",
+    "BlobConnectionString": "",
+    "ServiceBusConnectionString": ""
+  }
+}
