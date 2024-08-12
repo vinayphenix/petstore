@@ -1,10 +1,7 @@
 package com.chtrembl.petstoreapp.controller;
 
-import com.chtrembl.petstoreapp.model.ContainerEnvironment;
-import com.chtrembl.petstoreapp.model.WebRequest;
-import org.slf4j.MDC;
-import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
+import java.io.IOException;
+import java.util.Enumeration;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -12,26 +9,29 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.util.Enumeration;
+
+import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+
+import com.chtrembl.petstoreapp.model.ContainerEnvironment;
+import com.chtrembl.petstoreapp.model.WebRequest;
 
 /**
  * First Filter in the chain to set some MDC data for logging purposes, since
- * this is static data, nothing request scope (yet), this could be moved to the
+ * this is statis data, nothing request scope (yet), this could be moved to the
  * logging context singleton.
  */
 @Component
 @Order(1)
 public class LoggingFilter implements Filter {
 
-	private final ContainerEnvironment containerEnvironment;
+	@Autowired
+	private ContainerEnvironment containerEnvironment;
 
-	private final WebRequest webRequest;
-
-	public LoggingFilter(ContainerEnvironment containerEnvironment, WebRequest webRequest) {
-		this.containerEnvironment = containerEnvironment;
-		this.webRequest = webRequest;
-	}
+	@Autowired
+	private WebRequest webRequest;
 
 	@Override
 	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)

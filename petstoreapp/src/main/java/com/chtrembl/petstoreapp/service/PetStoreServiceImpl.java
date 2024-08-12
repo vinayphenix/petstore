@@ -3,6 +3,24 @@ package com.chtrembl.petstoreapp.service;
 /**
  * Implementation for service calls to the APIM/AKS
  */
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import javax.annotation.PostConstruct;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientException;
 
 import com.chtrembl.petstoreapp.model.Category;
 import com.chtrembl.petstoreapp.model.ContainerEnvironment;
@@ -15,50 +33,29 @@ import com.chtrembl.petstoreapp.model.WebRequest;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientException;
+
 import reactor.core.publisher.Mono;
 
-import javax.annotation.PostConstruct;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-import com.microsoft.applicationinsights.TelemetryClient;
-
-@Service
+@Component
 public class PetStoreServiceImpl implements PetStoreService {
-	private static final Logger logger = LoggerFactory.getLogger(PetStoreServiceImpl.class);
-	private static final TelemetryClient telemetryClient = new TelemetryClient();
+	private static Logger logger = LoggerFactory.getLogger(PetStoreServiceImpl.class);
 
+	@Autowired
+	private User sessionUser;
 
-	private final User sessionUser;
-	private final ContainerEnvironment containerEnvironment;
-	private final WebRequest webRequest;
+	@Autowired
+	private ContainerEnvironment containerEnvironment;
+
+	@Autowired
+	private WebRequest webRequest;
 
 	private WebClient petServiceWebClient = null;
 	private WebClient productServiceWebClient = null;
 	private WebClient orderServiceWebClient = null;
 
-	public PetStoreServiceImpl(User sessionUser, ContainerEnvironment containerEnvironment, WebRequest webRequest) {
-		this.sessionUser = sessionUser;
-		this.containerEnvironment = containerEnvironment;
-		this.webRequest = webRequest;
-	}
-
 	@PostConstruct
 	public void initialize() {
-		this.petServiceWebClient = WebClient.builder()
-				.baseUrl(this.containerEnvironment.getPetStorePetServiceURL())
+		this.petServiceWebClient = WebClient.builder().baseUrl(this.containerEnvironment.getPetStorePetServiceURL())
 				.build();
 		this.productServiceWebClient = WebClient.builder()
 				.baseUrl(this.containerEnvironment.getPetStoreProductServiceURL()).build();
@@ -68,24 +65,29 @@ public class PetStoreServiceImpl implements PetStoreService {
 
 	@Override
 	public Collection<Pet> getPets(String category) {
-		List<Pet> pets = new ArrayList<>();
-		logger.info("before test");
-		telemetryClient.trackEvent(String.format("PetStoreApp user %s is requesting to retrieve pets from the PetStorePetService",
-						this.sessionUser.getName()),
-				this.sessionUser.getCustomEventProperties(), null);
+		List<Pet> pets = new ArrayList<Pet>();
+
 		this.sessionUser.getTelemetryClient().trackEvent(
 				String.format("PetStoreApp user %s is requesting to retrieve pets from the PetStorePetService",
 						this.sessionUser.getName()),
 				this.sessionUser.getCustomEventProperties(), null);
-        logger.info("after test");
 		try {
 			Consumer<HttpHeaders> consumer = it -> it.addAll(this.webRequest.getHeaders());
+
+			// log all of the headers in the petServiceWebClient request
+			logger.info("Headers in the petServiceWebClient request " + this.containerEnvironment.getPetStorePetServiceURL());
+			this.webRequest.getHeaders().forEach((k, v) -> {
+				logger.info("Key: " + k + " Value: " + v);
+			});
+			logger.info("Key: " + "Ocp-Apim-Subscription-Key" + " Value: " + this.containerEnvironment.getPetStoreServicesSubscriptionKey());
+		
 			pets = this.petServiceWebClient.get().uri("petstorepetservice/v2/pet/findByStatus?status=available")
 					.accept(MediaType.APPLICATION_JSON)
 					.headers(consumer)
 					.header("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-					.header("Cache-Control", "no-cache")
-					.retrieve()
+					.header("session-id", this.sessionUser.getSessionId())
+					.header("Ocp-Apim-Subscription-Key", this.containerEnvironment.getPetStoreServicesSubscriptionKey())
+					.header("Cache-Control", "no-cache").header("Ocp-Apim-Trace", "true").retrieve()
 					.bodyToMono(new ParameterizedTypeReference<List<Pet>>() {
 					}).block();
 
@@ -104,12 +106,16 @@ public class PetStoreServiceImpl implements PetStoreService {
 			this.sessionUser.getTelemetryClient().trackEvent(
 					String.format("PetStoreApp %s received %s, container host: %s", this.sessionUser.getName(),
 							wce.getMessage(), this.containerEnvironment.getContainerHostName()));
+			// little hack to visually show the error message within our Azure Pet Store
+			// Reference Guide (Academic Tutorial)
 			Pet pet = new Pet();
 			pet.setName(wce.getMessage());
 			pet.setPhotoURL("");
 			pet.setCategory(new Category());
 			pet.setId((long) 0);
 			pets.add(pet);
+			logger.error(wce.getMessage());
+
 		} catch (IllegalArgumentException iae) {
 			// little hack to visually show the error message within our Azure Pet Store
 			// Reference Guide (Academic Tutorial)
@@ -120,17 +126,20 @@ public class PetStoreServiceImpl implements PetStoreService {
 			pet.setCategory(new Category());
 			pet.setId((long) 0);
 			pets.add(pet);
+			logger.error(iae.getMessage());
 		}
+
 		return pets;
 	}
 
 	@Override
-	public Collection<Product> getProducts(String category, List<Tag> tags) throws Exception {
-		List<Product> products = new ArrayList<>();
-		telemetryClient.trackEvent(String.format("PetStoreApp user %s is requesting to retrieve products from the PetStorePetService",
-						this.sessionUser.getName()),
-				this.sessionUser.getCustomEventProperties(), null);
+	public Collection<Product> getProducts(String category, List<Tag> tags) {
+		List<Product> products = new ArrayList<Product>();
 
+		this.sessionUser.getTelemetryClient()
+				.trackEvent(String.format(
+						"PetStoreApp user %s is requesting to retrieve products from the PetStoreProductService",
+						this.sessionUser.getName()), this.sessionUser.getCustomEventProperties(), null);
 		try {
 			Consumer<HttpHeaders> consumer = it -> it.addAll(this.webRequest.getHeaders());
 			products = this.productServiceWebClient.get()
@@ -138,8 +147,9 @@ public class PetStoreServiceImpl implements PetStoreService {
 					.accept(MediaType.APPLICATION_JSON)
 					.headers(consumer)
 					.header("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-					.header("Cache-Control", "no-cache")
-					.retrieve()
+					.header("session-id", this.sessionUser.getSessionId())
+					.header("Ocp-Apim-Subscription-Key", this.containerEnvironment.getPetStoreServicesSubscriptionKey())
+					.header("Cache-Control", "no-cache").header("Ocp-Apim-Trace", "true").retrieve()
 					.bodyToMono(new ParameterizedTypeReference<List<Product>>() {
 					}).block();
 
@@ -158,11 +168,14 @@ public class PetStoreServiceImpl implements PetStoreService {
 				products = products.stream().filter(product -> category.equals(product.getCategory().getName())
 						&& product.getTags().toString().contains("small")).collect(Collectors.toList());
 			}
-			telemetryClient.trackMetric("ProductCount",products.size());
 			return products;
 		} catch (
 
 		WebClientException wce) {
+			this.sessionUser.getTelemetryClient().trackException(wce);
+			this.sessionUser.getTelemetryClient().trackEvent(
+					String.format("PetStoreApp %s received %s, container host: %s", this.sessionUser.getName(),
+							wce.getMessage(), this.containerEnvironment.getContainerHostName()));
 			// little hack to visually show the error message within our Azure Pet Store
 			// Reference Guide (Academic Tutorial)
 			Product product = new Product();
@@ -183,7 +196,6 @@ public class PetStoreServiceImpl implements PetStoreService {
 			product.setId((long) 0);
 			products.add(product);
 		}
-
 		return products;
 	}
 
@@ -216,14 +228,15 @@ public class PetStoreServiceImpl implements PetStoreService {
 					.configure(SerializationFeature.FAIL_ON_SELF_REFERENCES, false).writeValueAsString(updatedOrder);
 
 			Consumer<HttpHeaders> consumer = it -> it.addAll(this.webRequest.getHeaders());
-
-			updatedOrder = this.orderServiceWebClient.post().uri("petstoreorderservice/v2/store/order")
+			
+			this.orderServiceWebClient.post().uri("petstoreorderservice/v2/store/order")
 					.body(BodyInserters.fromPublisher(Mono.just(orderJSON), String.class))
 					.accept(MediaType.APPLICATION_JSON)
 					.headers(consumer)
 					.header("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-					.header("Cache-Control", "no-cache")
-					.retrieve()
+					.header("session-id", this.sessionUser.getSessionId())
+					.header("Ocp-Apim-Subscription-Key", this.containerEnvironment.getPetStoreServicesSubscriptionKey())
+					.header("Cache-Control", "no-cache").header("Ocp-Apim-Trace", "true").retrieve()
 					.bodyToMono(Order.class).block();
 
 		} catch (Exception e) {
@@ -241,19 +254,22 @@ public class PetStoreServiceImpl implements PetStoreService {
 		Order order = null;
 		try {
 			Consumer<HttpHeaders> consumer = it -> it.addAll(this.webRequest.getHeaders());
-
+			
 			order = this.orderServiceWebClient.get()
 					.uri(uriBuilder -> uriBuilder.path("petstoreorderservice/v2/store/order/{orderId}").build(orderId))
 					.accept(MediaType.APPLICATION_JSON)
 					.headers(consumer)
 					.header("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-					.header("Cache-Control", "no-cache")
-					.retrieve()
+					.header("session-id", this.sessionUser.getSessionId())
+					.header("Ocp-Apim-Subscription-Key", this.containerEnvironment.getPetStoreServicesSubscriptionKey())
+					.header("Cache-Control", "no-cache").header("Ocp-Apim-Trace", "true").retrieve()
 					.bodyToMono(new ParameterizedTypeReference<Order>() {
 					}).block();
+
 		} catch (Exception e) {
 			logger.warn(e.getMessage());
 		}
+
 		return order;
 	}
 

@@ -27,6 +27,7 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
 	public void configure(WebSecurity web) throws Exception {
 		if (this.aadB2COidcLoginConfigurerWrapper != null
 				&& this.aadB2COidcLoginConfigurerWrapper.getConfigurer() != null) {
+			web.ignoring().antMatchers("/static/**");
 			web.ignoring().antMatchers("/content/**");
 			web.ignoring().antMatchers("/.well-known/**");
 		}
@@ -44,13 +45,24 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
 					.antMatchers("/*product*").permitAll()
 					.antMatchers("/*cart*").permitAll()
 					.antMatchers("/api/contactus").permitAll()
+					.antMatchers("/api/updatecart").permitAll()
+					.antMatchers("/api/completecart").permitAll()
+					.antMatchers("/api/cartcount").permitAll()
+					.antMatchers("/api/viewcart").permitAll()
 					.antMatchers("/slowness").permitAll()
 					.antMatchers("/exception").permitAll()
 					.antMatchers("/introspectionSimulation*").permitAll()
 					.antMatchers("/bingSearch*").permitAll()
 					.antMatchers("/signalr/negotiate").permitAll()
 					.antMatchers("/signalr/test").permitAll()
-					.antMatchers("/login*").permitAll().anyRequest()
+					.antMatchers("/login*").permitAll()
+					.antMatchers("/soulmachines*").permitAll()
+					.antMatchers("/intelligence*").permitAll()
+					.antMatchers("/i2xhack*").permitAll()
+					.antMatchers("/pets*").permitAll()
+					.antMatchers("/debug*").permitAll()
+					.antMatchers("/raadcnnai*").permitAll()
+					.antMatchers("/hybridConnection").permitAll().anyRequest()
 					.authenticated().and().apply(this.aadB2COidcLoginConfigurerWrapper.getConfigurer()).and()
 					.oauth2Login().loginPage("/login");
 

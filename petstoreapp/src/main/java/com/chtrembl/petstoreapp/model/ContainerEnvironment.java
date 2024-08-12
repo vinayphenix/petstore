@@ -1,10 +1,19 @@
 package com.chtrembl.petstoreapp.model;
 
-import ch.qos.logback.core.joran.spi.JoranException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.jsonwebtoken.JwtBuilder;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Serializable;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.PostConstruct;
+import javax.crypto.spec.SecretKeySpec;
+
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,21 +26,18 @@ import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.util.FileCopyUtils;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
-import javax.annotation.PostConstruct;
-import javax.crypto.spec.SecretKeySpec;
-import java.io.IOException;
-import java.io.Serializable;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
-import java.security.Key;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
+import com.fasterxml.jackson.databind.ObjectMapper;
+//import com.microsoft.applicationinsights.core.dependencies.google.common.io.CharStreams;
+
+import ch.qos.logback.core.joran.spi.JoranException;
+import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import reactor.core.publisher.Mono;
 
 /**
  * Singleton to store container state
@@ -96,7 +102,6 @@ public class ContainerEnvironment implements Serializable {
 
 	@PostConstruct
 	private void initialize() throws JoranException {
-		// LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
 
 		if (StringUtils.isNoneEmpty(this.getSignalRKey()) && StringUtils.isNoneEmpty(this.getSignalRNegotiationURL())
 				&& StringUtils.isNoneEmpty(this.getSignalRServiceURL())) {
@@ -112,7 +117,12 @@ public class ContainerEnvironment implements Serializable {
 
 		try {
 			ObjectMapper objectMapper = new ObjectMapper();
-			Version version = objectMapper.readValue(new ClassPathResource("version.json").getFile(), Version.class);
+			InputStream resource = new ClassPathResource("static/content/version.json").getInputStream();
+			
+		    byte[] bdata = FileCopyUtils.copyToByteArray(resource);
+		    String text = new String(bdata, StandardCharsets.UTF_8);
+	
+		    Version version = objectMapper.readValue(text, Version.class);
 			this.setAppVersion(version.getVersion());
 			this.setAppDate(version.getDate());
 		} catch (IOException e) {
