@@ -48,6 +48,10 @@ spring:
           credential:
             client-id: ${AD_CLIENT_ID}
             client-secret: ${AD_CLIENT_SECRET}
+          reply-url: ${PETSTORE_REPLY_URL}
+          logout-success-url: ${PETSTORE_SUCCESS_URL}
           login-flow: sign-up-or-sign-in
           user-flows:
             sign-up-or-sign-in: 'B2C_1_signin_signup1'
+            profile-edit: 'B2C_1_profileediting'
+            password-reset: 'B2C_1_passwordreset'
