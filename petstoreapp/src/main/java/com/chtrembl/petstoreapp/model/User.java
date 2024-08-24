@@ -26,9 +26,6 @@ public class User implements Serializable {
 	private String sessionId = null;
 	private String email = null;
 
-	private String jSessionId = null;
-	private String csrfToken = null;
-
 	// intentionally avoiding spring cache to ensure service calls are made each
 	// time to show Telemetry with APIM requests
 	private List<Pet> pets;
@@ -50,7 +47,7 @@ public class User implements Serializable {
 	@PostConstruct
 	private void initialize() {
 		if (this.telemetryClient == null) {
-			this.telemetryClient = new TelemetryClient();
+			this.telemetryClient = new com.chtrembl.petstoreapp.service.TelemetryClient();
 		}
 	}
 
@@ -78,22 +75,6 @@ public class User implements Serializable {
 		this.email = email;
 	}
 
-	public void setJSessionId(String jSessionId) {
-		this.jSessionId = jSessionId;
-	}
-	
-	public String getJSessionId() {
-		return jSessionId;
-	}
-	
-	public void setCsrfToken(String csrfToken) {
-		this.csrfToken = csrfToken;
-	}
-
-	public String getCsrfToken() {
-		return csrfToken;
-	}
-	
 	public TelemetryClient getTelemetryClient() {
 		return this.telemetryClient;
 	}

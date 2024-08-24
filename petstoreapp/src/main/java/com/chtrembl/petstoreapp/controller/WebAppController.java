@@ -5,34 +5,37 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.context.request.RequestContextHolder;
 
-import com.chtrembl.petstoreapp.model.Breed;
+import com.chtrembl.petstoreapp.model.ContainerEnvironment;
 import com.chtrembl.petstoreapp.model.Order;
 import com.chtrembl.petstoreapp.model.Pet;
 import com.chtrembl.petstoreapp.model.User;
 import com.chtrembl.petstoreapp.model.WebPages;
-import com.chtrembl.petstoreapp.repository.BreedRepository;
 import com.chtrembl.petstoreapp.service.PetStoreService;
 import com.chtrembl.petstoreapp.service.SearchService;
 import com.microsoft.applicationinsights.telemetry.PageViewTelemetry;
+import com.nimbusds.jose.shaded.json.JSONArray;
 
 /**
  * Web Controller for all of the model/presentation construction and various
@@ -43,6 +46,9 @@ public class WebAppController {
 	private static Logger logger = LoggerFactory.getLogger(WebAppController.class);
 
 	@Autowired
+	private ContainerEnvironment containerEnvironment;
+
+	@Autowired
 	private PetStoreService petStoreService;
 
 	@Autowired
@@ -50,10 +56,71 @@ public class WebAppController {
 
 	@Autowired
 	private User sessionUser;
-	
-	@Autowired(required = false)
-	private BreedRepository breedRepository;
-	
+
+	@Autowired
+	private CacheManager currentUsersCacheManager;
+
+	@ModelAttribute
+	public void setModel(HttpServletRequest request, Model model, OAuth2AuthenticationToken token) {
+
+		CaffeineCache caffeineCache = (CaffeineCache) this.currentUsersCacheManager
+				.getCache(ContainerEnvironment.CURRENT_USERS_HUB);
+		com.github.benmanes.caffeine.cache.Cache<Object, Object> nativeCache = caffeineCache.getNativeCache();
+
+		// this is used for n tier correlated Telemetry. Keep the same one for anonymous
+		// sessions that get authenticateds
+		if (this.sessionUser.getSessionId() == null) {
+			String sessionId = RequestContextHolder.currentRequestAttributes().getSessionId();
+			this.sessionUser.setSessionId(sessionId);
+			// put session in TTL cache so its there after initial login
+			caffeineCache.put(this.sessionUser.getSessionId(), this.sessionUser.getName());
+			this.containerEnvironment.sendCurrentUsers();
+		}
+
+		// put session in TTL cache to refresh TTL
+		caffeineCache.put(this.sessionUser.getSessionId(), this.sessionUser.getName());
+
+		if (token != null) {
+			final OAuth2User user = token.getPrincipal();
+//			token = token == null ? TokenGenerator.generate() : token;
+
+			try {
+				this.sessionUser.setEmail((String) ((JSONArray) user.getAttribute("emails")).get(0));
+			} catch (Exception e) {
+				logger.warn(String.format("PetStoreApp  %s logged in, however cannot get email associated: %s",
+						this.sessionUser.getName(), e.getMessage()));
+			}
+
+			// this should really be done in the authentication/pre auth flow....
+			this.sessionUser.setName((String) user.getAttributes().get("name"));
+
+			if (!this.sessionUser.isInitialTelemetryRecorded()) {
+				this.sessionUser.getTelemetryClient().trackEvent(
+						String.format("PetStoreApp %s logged in, container host: %s", this.sessionUser.getName(),
+								this.containerEnvironment.getContainerHostName()),
+						this.sessionUser.getCustomEventProperties(), null);
+
+				this.sessionUser.setInitialTelemetryRecorded(true);
+			}
+			model.addAttribute("claims", user.getAttributes());
+			model.addAttribute("user", this.sessionUser.getName());
+			model.addAttribute("grant_type", user.getAuthorities());
+		}
+
+		model.addAttribute("userName", this.sessionUser.getName());
+		model.addAttribute("containerEnvironment", this.containerEnvironment);
+
+		model.addAttribute("sessionId", this.sessionUser.getSessionId());
+
+		model.addAttribute("appVersion", this.containerEnvironment.getAppVersion());
+
+		model.addAttribute("cartSize", this.sessionUser.getCartCount());
+
+		model.addAttribute("currentUsersOnSite", nativeCache.asMap().keySet().size());
+		model.addAttribute("signalRNegotiationURL", this.containerEnvironment.getSignalRNegotiationURL());
+
+		MDC.put("session_Id", this.sessionUser.getSessionId());
+	}
 
 	@GetMapping(value = "/login")
 	public String login(Model model, HttpServletRequest request) throws URISyntaxException {
@@ -246,101 +313,5 @@ public class WebAppController {
 		model.addAttribute("webpages", webpages);
 
 		return "bingSearch";
-	}
-	
-	@GetMapping(value = "/hybridConnection")
-	public String hybridConnection(Model model) throws URISyntaxException {
-		logger.info(String.format("PetStoreApp /hybridConnection requested for %s, routing to hybridConnection view...",
-				this.sessionUser.getName()));
-		
-		List<Breed> breeds = null;
-		
-		if(this.breedRepository != null)
-		{
-			breeds = this.breedRepository.findAll();
-		}
-		
-		model.addAttribute("breeds", breeds);
-
-		return "hybridConnection";
-	}
-	
-	@GetMapping(value = "/soulmachines")
-	public String soulmachines(Model model, HttpServletRequest request, @RequestParam("sid") Optional<String> sid,  @RequestParam("csrf") Optional<String> csrf, @RequestParam("arr") Optional<String> arr) throws URISyntaxException {
-		logger.info(String.format("PetStoreApp /soulmachines requested for %s, routing to soulmachines view...",
-				this.sessionUser.getName()));		
-
-		// if the user hits this page without a sessions/csrf, redirect and establish one
-		if(new HttpSessionCsrfTokenRepository().loadToken(request) == null)
-		{
-			return "redirect:/home";
-		}
-
-		if(new HttpSessionCsrfTokenRepository().loadToken(request) != null)
-		{
-			this.sessionUser.setCsrfToken(new HttpSessionCsrfTokenRepository().loadToken(request).getToken().toString());		
-		}
-
-		String arrAffinity = "";
-		if(request.getCookies() != null)
-		{
-			for(int i = 0; i < request.getCookies().length; i++)
-			{
-				if(request.getCookies()[i].getName().equals("ARRAffinity"))
-				{
-					arrAffinity = request.getCookies()[i].getValue();
-				}
-			}
-		}
-
-		model.addAttribute("arrAffinity", arrAffinity);
-
-		String url = request.getRequestURL().toString() + "?" + request.getQueryString();	
-		if(!url.contains("sid") || !url.contains("csrf"))
-		{
-			return "redirect:soulmachines?sid="+this.sessionUser.getJSessionId()+"&csrf="+this.sessionUser.getCsrfToken()+"&arr="+arrAffinity;
-		}
-		
-		return "soulmachines";
-	}
-	
-	@GetMapping(value = "/intelligence")
-	public String intelligence(Model model) throws URISyntaxException {
-		logger.info(String.format("PetStoreApp /intelligence requested for %s, routing to intelligence view...",
-				this.sessionUser.getName()));
-	
-		return "intelligence";
-	}
-
-	@GetMapping(value = "/i2xhack")
-	public String i2xhack(Model model) throws URISyntaxException {
-		logger.info(String.format("PetStoreApp /i2xhack requested for %s, routing to i2xhack view...",
-				this.sessionUser.getName()));
-	
-		return "i2xhack";
-	}
-
-	@GetMapping(value = "/raadcnnai")
-	public String raadcnnai(Model model) throws URISyntaxException {
-		logger.info(String.format("PetStoreApp /raadcnnai requested for %s, routing to raadcnnai view...",
-				this.sessionUser.getName()));
-	
-		return "raadcnnai";
-	}
-
-	@GetMapping(value = "/debug")
-	public String debug(Model model, HttpServletRequest request) throws URISyntaxException {
-		logger.info(String.format("PetStoreApp /debug requested for %s, routing to raadcnnai view...",
-				this.sessionUser.getName()));
-		
-		model.addAttribute("cookies", request.getCookies());
-		Map<String, String> headers = new HashMap<String, String>();
-		request.getHeaderNames().asIterator().forEachRemaining(header -> {
-			headers.put(header, request.getHeader(header));
-		});
-		model.addAttribute("headers", headers);
-		
-
-		return "debug";
 	}
 }
