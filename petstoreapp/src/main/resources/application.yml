@@ -31,12 +31,12 @@ server:
 azure:
   activedirectory:
     b2c:
-      tenant: ${PETSTOREAPP_B2C_TENANT}
+      tenant: ${PETSTOREAPP_B2C_TENANT:temp}
       oidc-enabled: true
-      client-id: ${PETSTOREAPP_B2C_CLIENT_ID}
-      client-secret: ${PETSTOREAPP_B2C_CLIENT_SECRET}
-      reply-url: ${PETSTOREAPP_B2C_REPLY_URL}
-      logout-success-url: ${PETSTOREAPP_B2C_LOGOUT_URL}
+      client-id: ${PETSTOREAPP_B2C_CLIENT_ID:temp}
+      client-secret: ${PETSTOREAPP_B2C_CLIENT_SECRET:temp}
+      reply-url: ${PETSTOREAPP_B2C_REPLY_URL:temp}
+      logout-success-url: ${PETSTOREAPP_B2C_LOGOUT_URL:temp}
       user-flows:
         sign-up-or-sign-in: B2C_1_signupsignin
         profile-edit: B2C_1_profileediting
