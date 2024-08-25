@@ -29,11 +29,11 @@ spring:
 #            managed-identity-enabled: true
       cosmos:
         database: petstore
-        endpoint: ${COSMOS_DB}
-        key: ${COSMOS-TOKEN}
+        endpoint: ${COSMOSDB}
+        key: ${COSMOSTOKEN}
       servicebus:
-        url: ${QUEUE-URL}
-        queue: ${QUEUE_NAME:reservations}
+        url: ${QUEUEURL}
+        queue: ${QUEUENAME:reservations}
 
 management:
   endpoints:
