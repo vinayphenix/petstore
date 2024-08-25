@@ -9,10 +9,18 @@ server:
 spring:
   application:
     name: petstorepetservice
+  cloud:
+    azure:
+      keyvault:
+        secret:
+          property-sources[0]:
+            endpoint: https://modulefinalpetstore-kv.vault.azure.net/
+          credential:
+            managed-identity-enabled: true
   datasource:
-    password: Password@123
-    url: jdbc:postgresql://module8postgres.postgres.database.azure.com:5432/petstorepetservice_db?sslmode=require
-    username: module8admin
+    password: ${PASSWORD}
+    url: ${PETSERVICE-DB}
+    username: ${USERNAME}
   jpa:
     properties:
       hibernate:
