@@ -1,5 +1,6 @@
 package com.chtrembl.petstore.order.model;
 
+import com.azure.spring.data.cosmos.core.mapping.Container;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -7,6 +8,7 @@ import java.util.Objects;
 
 import javax.validation.Valid;
 
+import org.springframework.data.annotation.Id;
 import org.springframework.validation.annotation.Validated;
 import org.threeten.bp.OffsetDateTime;
 
@@ -16,33 +18,29 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 import io.swagger.annotations.ApiModelProperty;
 
-/**
- * Order
- */
 @Validated
 @javax.annotation.Generated(value = "io.swagger.codegen.languages.SpringCodegen", date = "2021-12-23T15:16:30.446-05:00")
 
+@Container(containerName = "orders")
 public class Order implements Serializable {
 	@JsonProperty("id")
-	private String id = null;
+	@Id
+	private String id;
 
 	@JsonProperty("email")
-	private String email = null;
+	private String email;
 
 	@JsonProperty("products")
 	@Valid
-	private List<Product> products = null;
+	private List<Product> products;
 
 	@JsonProperty("shipDate")
-	private OffsetDateTime shipDate = null;
+	private OffsetDateTime shipDate;
 
 	@JsonProperty("tags")
 	@Valid
-	private List<Tag> tags = null;
+	private List<Tag> tags;
 
-	/**
-	 * Order Status
-	 */
 	public enum StatusEnum {
 		PLACED("placed"),
 
@@ -84,11 +82,6 @@ public class Order implements Serializable {
 		return this;
 	}
 
-	/**
-	 * Get id
-	 * 
-	 * @return id
-	 **/
 	@ApiModelProperty(value = "")
 
 	public String getId() {
@@ -120,11 +113,6 @@ public class Order implements Serializable {
 		return this;
 	}
 
-	/**
-	 * Get products
-	 * 
-	 * @return products
-	 **/
 	@ApiModelProperty(value = "")
 
 	@Valid
@@ -142,11 +130,6 @@ public class Order implements Serializable {
 		return this;
 	}
 
-	/**
-	 * Get shipDate
-	 * 
-	 * @return shipDate
-	 **/
 	@ApiModelProperty(value = "")
 
 	@Valid
@@ -172,11 +155,6 @@ public class Order implements Serializable {
 		return this;
 	}
 
-	/**
-	 * Get tags
-	 * 
-	 * @return tags
-	 **/
 	@ApiModelProperty(value = "")
 
 	@Valid
@@ -194,11 +172,6 @@ public class Order implements Serializable {
 		return this;
 	}
 
-	/**
-	 * Order Status
-	 * 
-	 * @return status
-	 **/
 	@ApiModelProperty(value = "Order Status")
 
 	public StatusEnum getStatus() {
@@ -214,11 +187,6 @@ public class Order implements Serializable {
 		return this;
 	}
 
-	/**
-	 * Get complete
-	 * 
-	 * @return complete
-	 **/
 	@ApiModelProperty(value = "")
 
 	public Boolean isComplete() {
@@ -263,10 +231,6 @@ public class Order implements Serializable {
 		return sb.toString();
 	}
 
-	/**
-	 * Convert the given object to string with each line indented by 4 spaces
-	 * (except the first line).
-	 */
 	private String toIndentedString(java.lang.Object o) {
 		if (o == null) {
 			return "null";

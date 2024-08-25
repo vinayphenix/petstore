@@ -2,13 +2,13 @@ package io.swagger;
 
 import com.azure.spring.data.cosmos.repository.config.EnableCosmosRepositories;
 import com.chtrembl.petstore.order.model.ContainerEnvironment;
+import com.microsoft.applicationinsights.attach.ApplicationInsights;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.ExitCodeGenerator;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -42,6 +42,7 @@ public class Swagger2SpringBoot implements CommandLineRunner {
 	}
 
 	public static void main(String[] args) throws Exception {
+		ApplicationInsights.attach();
 		new SpringApplication(Swagger2SpringBoot.class).run(args);
 	}
 

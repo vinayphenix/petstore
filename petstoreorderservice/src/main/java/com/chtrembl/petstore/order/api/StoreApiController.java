@@ -4,14 +4,17 @@ import com.azure.messaging.servicebus.ServiceBusMessage;
 import com.azure.messaging.servicebus.ServiceBusSenderClient;
 import com.chtrembl.petstore.order.model.ContainerEnvironment;
 import com.chtrembl.petstore.order.model.Order;
+import com.chtrembl.petstore.order.model.OrderRepository;
 import com.chtrembl.petstore.order.model.Product;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.annotations.ApiParam;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.NativeWebRequest;
 
 import javax.validation.Valid;
@@ -54,6 +58,15 @@ public class StoreApiController implements StoreApi {
 
 	@Autowired
 	private ServiceBusSenderClient senderClient;
+
+	@Value("${petstore.service.reserver.url:}")
+	private String petStoreOrderItemsReserverURL;
+
+	@Autowired
+	private RestTemplate restTemplate;
+
+	@Autowired
+	private OrderRepository orderRepository;
 
 	@Override
 	public StoreApiCache getBeanToBeAutowired() {
@@ -110,8 +123,8 @@ public class StoreApiController implements StoreApi {
 			@ApiParam(value = "order placed for purchasing the product", required = true) @Valid @RequestBody Order body) {
 		conigureThreadForLogging();
 
-		String acceptType = request.getHeader("Content-Type");
-		String contentType = request.getHeader("Content-Type");
+		String acceptType = Optional.ofNullable(request.getHeader("Content-Type")).orElse("application/json");
+		String contentType = Optional.ofNullable(request.getHeader("Content-Type")).orElse("application/json");
 		if (acceptType != null && contentType != null && acceptType.contains("application/json")
 				&& contentType.contains("application/json")) {
 
@@ -170,7 +183,8 @@ public class StoreApiController implements StoreApi {
 				Order order = this.storeApiCache.getOrder(body.getId());
 				String orderJSON = new ObjectMapper().writeValueAsString(order);
 				senderClient.sendMessage(new ServiceBusMessage(orderJSON));
-
+//				reserve(order);
+				orderRepository.save(order);
 				ApiUtil.setResponse(request, "application/json", orderJSON);
 				return new ResponseEntity<>(HttpStatus.OK);
 			} catch (IOException e) {
@@ -183,13 +197,34 @@ public class StoreApiController implements StoreApi {
 
 	}
 
+//	private void reserve(Order order) {
+//		log.info(String.format(
+//				"PetStoreOrderService reserving order id=%s, url=%s",
+//				order.getId(),
+//				this.petStoreOrderItemsReserverURL));
+//		ResponseEntity<Order> response = null;
+//		try {
+//			HttpHeaders headers = new HttpHeaders();
+//			headers.add("Accept", MediaType.APPLICATION_JSON_VALUE);
+//			headers.add("Content-Type", MediaType.APPLICATION_JSON_VALUE);
+//			HttpEntity<Order> entity = new HttpEntity<Order>(order);
+//			response = restTemplate
+//					.exchange(String.format("%s/api/reserver", this.petStoreOrderItemsReserverURL),
+//							HttpMethod.POST, entity, Order.class);
+//		} catch (Exception e) {
+//			log.error(String.format(
+//					"PetStoreOrderService error reserving order: %s",
+//					e.getMessage()));
+//		}
+//	}
+
 	@Override
 	public ResponseEntity<Order> getOrderById(
 			@ApiParam(value = "ID of the order that needs to be deleted", required = true) @PathVariable("orderId") String orderId) {
 		conigureThreadForLogging();
 
-		String acceptType = request.getHeader("Content-Type");
-		String contentType = request.getHeader("Content-Type");
+		String acceptType = Optional.ofNullable(request.getHeader("Content-Type")).orElse("application/json");
+		String contentType = Optional.ofNullable(request.getHeader("Content-Type")).orElse("application/json");
 		if (acceptType != null && contentType != null && acceptType.contains("application/json")
 				&& contentType.contains("application/json")) {
 
@@ -245,7 +280,7 @@ public class StoreApiController implements StoreApi {
 
 	@Override
 	public ResponseEntity<Map<String, Integer>> getInventory() {
-		String accept = request.getHeader("Accept");
+		String accept = Optional.ofNullable(request.getHeader("Content-Type")).orElse("application/json");
 		if (accept != null && accept.contains("application/json")) {
 			try {
 				return new ResponseEntity<Map<String, Integer>>(objectMapper.readValue("{  \"key\" : 0}", Map.class),

@@ -5,6 +5,7 @@ FROM maven:3.8.4-openjdk-17-slim AS build
 WORKDIR /build
 COPY pom.xml .
 COPY src ./src
+ENV MAVEN_OPTS="-Dmaven.test.skip=true -Djdk.lang.Process.launchMechanism=vfork"
 RUN mvn clean package
 
 #
