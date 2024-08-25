@@ -19,7 +19,7 @@ spring:
             managed-identity-enabled: true
   datasource:
     password: ${PASSWORD}
-    url: ${PETSERVICE-DB}
+    url: ${PETSERVICE}
     username: ${USERNAME}
   jpa:
     properties:
